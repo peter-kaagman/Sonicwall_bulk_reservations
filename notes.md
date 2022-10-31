@@ -12,9 +12,9 @@ In this little project I learned:
 
 ## Hacking the CLI with curl
 ### General notes
-- API endpoint can be found via the Sonicwall itself. There is a link to swagger in te legal section for the API. Takes a long time to load, but it seems all the endpoints are there. Use the browser search to find the relevant ones.
+- API endpoints can be found via the Sonicwall itself. There is a link to swagger in the legal section for the API. Takes a long time to load, but it seems all the endpoints are there. Use the browser search to find the relevant ones.
 - Information can be downloaded with -X GET
-- Information is in JSON format, on a 5700 it will have no formatting . Is can be cleaned up online i.e. on the site https://jsonformatter.curiousconcept.com/ to make ik human readable
+- Information is in JSON format, on a 5700 it will have no formatting . It can be cleaned up online i.e. on the site https://jsonformatter.curiousconcept.com/ to make it human readable. I've done this for most examples here.
 - Usually that information can be written back (adapted or to a different firewall) with -X POST
 - The curl option for writting back data is -d @file
 - When writing data back set the header with -H "Content-Type: application/json"

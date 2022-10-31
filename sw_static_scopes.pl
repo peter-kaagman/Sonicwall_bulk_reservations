@@ -15,6 +15,7 @@ my $reservations_file = prompt ("Reservation file:", -d => "reservations.csv");
 my $scopes_file = prompt ("Scopes file:", -d => "scopes.csv");
 my $c = WWW::Curl::Easy->new();
 
+my ($static_scopes, $dynamic_scopes, $interfaces, $wantedReservations, $wantedScopes);
 
 sub login { #	{{{1
 	my $response;
@@ -213,6 +214,42 @@ sub getStaticScopes{#	{{{1
 	}
 
 }#	}}}
+sub getDynamicScopes{#	{{{1
+	my $response;
+	my $response_body;
+	print "==getDynamicScopes==\n";
+	$c->setopt(CURLOPT_URL, "https://$server/api/sonicos/dhcp-server/ipv4/scopes/dynamic");
+	$c->setopt(CURLOPT_HEADER, "0");
+	$c->setopt(CURLOPT_WRITEDATA, \$response_body);
+	$c->setopt(CURLOPT_SSL_VERIFYHOST, "0");
+	$c->setopt(CURLOPT_SSL_VERIFYPEER, "0");
+	$c->setopt(CURLOPT_CUSTOMREQUEST, "GET");
+	my $retcode = $c->perform();
+	
+	if ($retcode == 0){
+		if ($c->getinfo(CURLINFO_HTTP_CODE) == 200){
+			my %excisting_scopes;
+			# Looks like the word true without quotes screws things up in decode_json
+			$response_body =~ s/True/"True"/g;
+			$response_body =~ s/true/"true"/g;
+			my $response = decode_json($response_body);
+			foreach my $hash_ref  (@{ $$response{"dhcp_server"}{"ipv4"}{"scope"}{"dynamic"} }){
+				#print Dumper $hash_ref;
+				my $IP = $$hash_ref{"from"};
+				$excisting_scopes{$IP} = $hash_ref;
+			}
+			return \%excisting_scopes;
+		}else{
+		        print("An error occured, HTTP code: " . $c->getinfo(CURLINFO_HTTP_CODE) ."\n");
+			return 0;
+		}
+
+	}else{
+		print("An error occured: $retcode\n".$c->strerror($retcode)." ".$c->errbuf."\n");
+		return 0;
+	}
+
+}#	}}}
 sub getInterfaces{#	{{{1
 	my $response;
 	my $response_body;
@@ -273,7 +310,7 @@ sub createHash{ # {{{1
 	}
 	return \%result;
 } # }}}
-sub createJSON { # {{{1
+sub createJSONDynamic { # {{{1
 	my $IP = shift;
 	my $reservations = shift;
 	my $scopes = shift;
@@ -345,19 +382,30 @@ sub createJSON { # {{{1
 END
 	return $reg_template;
 } # }}}
-
-if ( login() ){
-	print "Logged in\n";
-	# Static scopes on a SonicWall are what others call reservation
-	# Get te excisting ones to not do double work
-	my $static_scopes = getStaticScopes();
-	# Get the interfaces
-	# See if the reservation is applicable for this firewall
-	my $interfaces = getInterfaces();
-	# Create a hash from the MS DHCP reservations export
-	my $wantedReservations = createHash("IPAddress",$reservations_file);
-	# Create a hash from the MS DHCP scopes export
-	my $wantedScopes = createHash("ScopeId",$scopes_file);
+sub createDynamicScopes{ #{{{1
+	# Check to see which of those apply for the current firewall
+	# Itterate the wanted scopes - indexed by ScopeID
+	foreach my $start_ip (keys %{ $wantedScopes }){
+		# Check the interfaces to see if it belongs here
+		foreach my $IF_Name (keys %{ $interfaces }){
+			# Setup a subnet matcher to check
+			my $is_subnet = subnet_matcher (
+				$$interfaces{$IF_Name}{'ip_assignment'}{'mode'}{'static'}{'ip'} .  "/" .  $$interfaces{$IF_Name}{'ip_assignment'}{'mode'}{'static'}{'netmask'} 
+			);
+			if ($is_subnet->($start_ip)){
+				# $dynamic_scopes is indexed by start IP
+				# Bestaat deze al dan niet maken
+				if (! $$dynamic_scopes{$start_ip}){
+					print "$start_ip bestaat nog niet\n";
+				}else{
+					print "$start_ip bestaat al\n";
+				}
+			}
+		}
+	}
+} # }}}
+sub createStaticScopes{ #{{{1
+	# Static scopes <=> Reservations
 	# Lets check to see which of those apply for the current firewall
 	# Itterate the wanted reservation - indexed by IP
 	foreach my $IP (keys %{ $wantedReservations }){
@@ -371,14 +419,35 @@ if ( login() ){
 				#print "$IP zit in het subnet van $IF_Name\n";
 				if (! $$static_scopes{$IP}){
 					print "Reservering voor $IP bestaat nog niet.\n";
-					my $reservation = createJSON($IP,$wantedReservations,$wantedScopes);
-					postJSON("dhcp-server/ipv4/scopes/static",$reservation);
+					my $scope = createJSONDynamic($IP,$wantedReservations,$wantedScopes);
+					print $scope;
+				#	postJSON("dhcp-server/ipv4/scopes/static",$reservation);
 				}else{
 					print "Reservering voor $IP bestaat al.\n";
 				}
 			}
 		}
 	}
+} # }}}
+
+if ( login() ){
+	print "Logged in\n";
+	# Get some information from the logged in firewall
+	# Static scopes on a SonicWall are what others call reservation
+	# Get te excisting ones to not do double work
+	$static_scopes  = getStaticScopes();
+	$dynamic_scopes = getDynamicScopes();
+	#print Dumper $dynamic_scopes; exit 1;
+	$interfaces     = getInterfaces();
+
+	# Create a hash from the MS DHCP exports
+	$wantedReservations = createHash("IPAddress",$reservations_file);
+	$wantedScopes       = createHash("StartRange",$scopes_file);
+
+	# At this point we have all te information needed to create the dynamic and static scopes.
+	createDynamicScopes();
+	#createStaticScopes();
+
 	commitChanges();
 	if( logout() ){
 		print "Logged out again\n";
