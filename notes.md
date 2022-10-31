@@ -1,6 +1,7 @@
 # Bulk updates Sonicwall DHCP
 ## Preface
 I needed to to move our centralized DHCP setup (MS DHCP) to a de-centralized setup using our cluster of Sonicwall firewalls. Having quite a bit of reservations possed a problem. Offcourse I could create them by hand on the Sonicwalls. But this is a tedious error prone job. So I decided to use the SonicOS API for that job. Never done that before... so it should be fun.  Arround all the tool suggested was cURL. Fun to fool around with. Finding out how things work. My scripting language by choise, Perl, came in handy to process CSV files created with Powershell on the MS DHCP server.
+All samples are based on trial on a Sonicwall NSA5700, SonicOS 7.0.1-5080. I've noticed API changes between version.
 Having to to the work on different (Linux) clients made me use GitHub for syncing between the different systems. This gave me the oppertunity to share my notes.
 In this little project I learned:
 - How cURL works.
@@ -81,18 +82,116 @@ Ends the current session.
     }
  }
 ```
-### Config
-Config krijgen van de DHCP server. Hierin staan de dynamic en static scopes. De static scopes zijn de reserveringen.
+### Static scopes
+Get the static scopes (reservations) from the Sonicwall.
 
-`curl -k -i -X GET https://192.168.5.1/api/sonicos/dhcp-server/ipv4`
+`curl -k -i -X GET https://10.91.0.1/api/sonicos/dhcp-server/ipv4/scopes/static`
 
 #### Sample data
-ToDo
+```
+{
+   "dhcp_server":{
+      "ipv4":{
+         "scope":{
+            "static":[
+               {
+                  "ip":"10.41.1.1",
+                  "mac":"60128BD075A4",
+                  "enable":false,
+                  "name":"NWT-Canon-DS0",
+                  "lease_time":1440,
+                  "default_gateway":"10.41.0.1",
+                  "netmask":"255.255.0.0",
+                  "comment":"NWT-Canon-DS0",
+                  "domain_name":"",
+                  "dns":{
+                     "server":{
+                        "inherit":true
+                     }
+                  },
+                  "wins":{
+                     "primary":"0.0.0.0",
+                     "secondary":"0.0.0.0"
+                  },
+                  "call_manager":{
+                     "primary":"",
+                     "secondary":"",
+                     "tertiary":""
+                  },
+                  "network_boot":{
+                     "next_server":"0.0.0.0",
+                     "boot_file":"",
+                     "server_name":""
+                  },
+                  "generic_option":{
+                     "group":"Default options"
+                  },
+                  "always_send_option":true
+               }
+            ]
+         }
+      }
+   }
+}
+```
+
+### Dynamic scopes
+Get the dynamic scopes (reservations) from the Sonicwall.
+
+`curl -k -i -X GET https://10.91.0.1/api/sonicos/dhcp-server/ipv4/scopes/dynamic`
+
+#### Sample data
+```
+{
+   "dhcp_server":{
+      "ipv4":{
+         "scope":{
+            "dynamic":[
+               {
+                  "from":"10.44.1.1",
+                  "to":"10.44.4.255",
+                  "enable":true,
+                  "lease_time":1440,
+                  "default_gateway":"10.44.0.1",
+                  "netmask":"255.255.0.0",
+                  "comment":"NWT LLN Scope",
+                  "allow_bootp":false,
+                  "domain_name":"",
+                  "dns":{
+                     "server":{
+                        "inherit":true
+                     }
+                  },
+                  "wins":{
+                     "primary":"0.0.0.0",
+                     "secondary":"0.0.0.0"
+                  },
+                  "call_manager":{
+                     "primary":"",
+                     "secondary":"",
+                     "tertiary":""
+                  },
+                  "network_boot":{
+                     "next_server":"0.0.0.0",
+                     "boot_file":"",
+                     "server_name":""
+                  },
+                  "generic_option":{
+                     "group":"Default options"
+                  },
+                  "always_send_option":false
+               }
+            ]
+         }
+      }
+   }
+}
+```
 
 ### Interfaces
 De interfaces:
 
-`curl -k -i -X GET https://192.168.5.1/api/sonicos/interfaces/ipv4`
+`curl -k -i -X GET https://10.91.0.1/api/sonicos/interfaces/ipv4`
 
 #### Sample data
 Removed most for clarity.  5700 has A LOT of interfaces
