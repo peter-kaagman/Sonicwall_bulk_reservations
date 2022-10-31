@@ -1,0 +1,32 @@
+{
+  "dhcp_server": {
+    "ipv4": {
+      "scope": {
+        "static": [
+          {
+            "ip": "192.168.5.29",
+            "mac": "112233445566",
+            "enable": true,
+            "name": "testhost",
+            "lease_time": 1439,
+            "default_gateway": "192.168.5.1",
+            "netmask": "255.255.255.0",
+            "comment": "geen commentaar",
+            "domain_name": "bilbos-stekkie.com",
+            "dns": {
+                "server": {
+                    "static": {
+                        "primary": "192.168.0.250"
+                       ,"secondary": "0.0.0.0"
+                       ,"tertiary": "0.0.0.0"
+                    }
+                }
+            },
+            "generic_option": {},
+            "always_send_option": true
+          }
+        ]
+      }
+    }
+  }
+}

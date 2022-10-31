@@ -1,0 +1,26 @@
+{
+   "dhcp_server":{
+      "ipv4":{
+         "option":{
+            "group":[
+               {
+                  "name":"Default options",
+                  "option":{
+                     "object":[
+                        {
+                           "name":"NTP Server"
+                        },
+                        {
+                           "name":"DNS Servers"
+                        },
+                        {
+                           "name":"DomainName"
+                        }
+                     ]
+                  }
+               }
+            ]
+         }
+      }
+   }
+}

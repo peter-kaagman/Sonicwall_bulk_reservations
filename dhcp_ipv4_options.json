@@ -1,0 +1,46 @@
+{
+   "dhcp_server":{
+      "ipv4":{
+         "option":{
+            "object":[
+               {
+                  "name":"DomainName",
+                  "number":15,
+                  "array":false,
+                  "value":[
+                     {
+                        "string":"atlascollege.nl"
+                     }
+                  ]
+               },
+               {
+                  "name":"DNS Servers",
+                  "number":6,
+                  "array":true,
+                  "value":[
+                     {
+                        "ip":"10.0.9.72"
+                     },
+                     {
+                        "ip":"10.0.9.66"
+                     },
+                     {
+                        "ip":"10.0.9.56"
+                     }
+                  ]
+               },
+               {
+                  "name":"NTP Server",
+                  "number":42,
+                  "array":false,
+                  "value":[
+                     {
+                        "ip":"10.0.9.18"
+                     }
+                  ]
+               }
+            ]
+         }
+      }
+   }
+}

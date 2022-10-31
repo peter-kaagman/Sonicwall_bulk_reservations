@@ -1,0 +1,45 @@
+{
+  "dhcp_server": {
+    "ipv4": {
+      "scope": {
+        "static": [
+          {
+            "ip":"10.44.7.254",
+            "mac":"112233445566",
+            "enable":true,
+            "name":"Test",
+            "lease_time":1440,
+            "default_gateway":"10.44.0.1",
+            "netmask":"255.255.0.0",
+            "comment":"",
+            "domain_name":"",
+            "dns":{
+                "server":{ 
+                    "inherit":true
+                    }
+                },
+            "wins":{
+                "primary":"0.0.0.0",
+                "secondary":"0.0.0.0"
+                },
+            "call_manager":{
+                "primary":"",
+                "secondary":"",
+                "tertiary":""
+                },
+            "network_boot":{
+                "next_server":"0.0.0.0",
+                "boot_file":"",
+                "server_name":""
+                },
+            "generic_option":{
+                "group":"Default options"
+                },
+            "always_send_option":true
+
+        }
+        ]
+      }
+    }
+  }
+}

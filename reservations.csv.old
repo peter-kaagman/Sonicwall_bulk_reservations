@@ -1,0 +1,2 @@
+"IPAddress","ScopeId","AddressState","ClientId","Description","Name","Type","PSComputerName"
+"10.91.6.9","10.91.0.0","ActiveReservation","b4-79-c8-2e-53-90","test-ap-cvb","test-ap-cvb","Dhcp",
