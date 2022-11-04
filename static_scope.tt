@@ -1,0 +1,50 @@
+{
+  "dhcp_server": {
+    "ipv4": {
+      "scope": {
+        "static": [
+          {
+            "ip":"[% IP %]",
+            "mac":"[% MAC %]",
+            "enable":true,
+            "name":"[% COMMENT %]",
+            "lease_time":1440,
+            "default_gateway":"[% GW %]",
+            "netmask":"[% MASK %]",
+            "comment":"[% COMMENT %]",
+            "domain_name":"atlascollege.nl",
+            "dns":{
+               "server":{
+                  "static":{
+                     "primary":"10.0.9.72",
+                     "secondary":"10.0.9.66",
+                     "tertiary":"10.0.9.56"
+                  }
+               }
+            },
+            "wins":{
+                "primary":"0.0.0.0",
+                "secondary":"0.0.0.0"
+                },
+            "call_manager":{
+                "primary":"",
+                "secondary":"",
+                "tertiary":""
+                },
+            "network_boot":{
+                "next_server":"0.0.0.0",
+                "boot_file":"",
+                "server_name":""
+                },
+            "generic_option":{
+                "group":"Default options"
+                },
+            "always_send_option":true
+
+        }
+        ]
+      }
+    }
+  }
+}
+

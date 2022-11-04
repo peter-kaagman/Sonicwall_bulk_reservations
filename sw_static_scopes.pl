@@ -7,6 +7,7 @@ use Data::Dumper;
 use JSON;
 use Text::CSV qw( csv );
 use Net::Subnet qw( subnet_matcher );
+use Template;
 
 my $server = prompt ("Enter firewall ip:", -d => "10.91.0.1");
 my $user = prompt ("Username:", -d => "admin");
@@ -14,6 +15,10 @@ my $pass = prompt ("Password:", -e => "*");
 my $reservations_file = prompt ("Reservation file:", -d => "reservations.csv");
 my $scopes_file = prompt ("Scopes file:", -d => "scopes.csv");
 my $c = WWW::Curl::Easy->new();
+my $tt = Template->new({
+	INCLUDE_PATH => ".",
+	INTERPOLATE => 1,
+}) or die "$Template::ERROR\n";
 
 my ($static_scopes, $dynamic_scopes, $interfaces, $wantedReservations, $wantedScopes);
 
@@ -114,6 +119,7 @@ sub logout {#	{{{1
 sub  postJSON{#	{{{1
         my $EndPoint = shift;
 	my $DataRef = shift;
+	my $Method = shift;
 	print "==PostJSON==\n";
 
 	my $response;
@@ -128,13 +134,14 @@ sub  postJSON{#	{{{1
 	$c->setopt(CURLOPT_WRITEDATA, \$response_body);
 	$c->setopt(CURLOPT_SSL_VERIFYHOST, "0");
 	$c->setopt(CURLOPT_SSL_VERIFYPEER, "0");
-	$c->setopt(CURLOPT_CUSTOMREQUEST, "POST");
+	$c->setopt(CURLOPT_CUSTOMREQUEST, $Method);
 	$c->setopt(CURLOPT_POSTFIELDS, $DataRef);
 	$c->setopt(CURLOPT_HTTPHEADER, \@Headers);
 	my $retcode = $c->perform();
 	
 	if ($retcode == 0){
 		if ($c->getinfo(CURLINFO_HTTP_CODE) == 200){
+			print Dumper $response_body;
 			return 1;
 		}else{
 			print "Foutje 1\n";
@@ -145,6 +152,7 @@ sub  postJSON{#	{{{1
 
 	}else{
 		print("An error occured: $retcode\n".$c->strerror($retcode)." ".$c->errbuf."\n");
+		print $DataRef;
 		return 0;
 	}
 }#	}}}
@@ -171,6 +179,7 @@ sub commitChanges {#	{{{1
 			print Dumper $response_body;
 			return 1;
 		}else{
+			print Dumper $response_body;
 			return 0;
 		}
 
@@ -310,79 +319,7 @@ sub createHash{ # {{{1
 	}
 	return \%result;
 } # }}}
-sub createJSONDynamic { # {{{1
-	my $IP = shift;
-	my $reservations = shift;
-	my $scopes = shift;
-	my $MAC;
-	my $GW;
-	#print Dumper $$reservations{$IP};
-	# Remove dashes from MAC
-	if ($$reservations{$IP}{'ClientId'} =~ /([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})/){
-		$MAC ="$1$2$3$4$5$6"; 
-	}else{
-		$MAC = "undef";
-	}
-	my $MASK = $$scopes{ $$reservations{$IP}{'ScopeId'} }{'SubnetMask'};
-	# Description to comment
-	my $COMMENT = $$reservations{$IP}{'Description'};
-	# Compose gateway from scope id
-	if ($$reservations{$IP}{'ScopeId'} =~ /(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\d{1,3}/){
-		$GW = "$1.$2.$3.1";
-	}else{
-		$GW = "undef"
-	}
-	my $reg_template = << "END";
-{
-  "dhcp_server": {
-    "ipv4": {
-      "scope": {
-        "static": [
-          {
-            "ip":"$IP",
-            "mac":"$MAC",
-            "enable":false,
-            "name":"$COMMENT",
-            "lease_time":1440,
-            "default_gateway":"$GW",
-            "netmask":"$MASK",
-            "comment":"$COMMENT",
-            "domain_name":"",
-            "dns":{
-                "server":{ 
-                    "inherit":true
-                    }
-                },
-            "wins":{
-                "primary":"0.0.0.0",
-                "secondary":"0.0.0.0"
-                },
-            "call_manager":{
-                "primary":"",
-                "secondary":"",
-                "tertiary":""
-                },
-            "network_boot":{
-                "next_server":"0.0.0.0",
-                "boot_file":"",
-                "server_name":""
-                },
-            "generic_option":{
-                "group":"Default options"
-                },
-            "always_send_option":true
-
-        }
-        ]
-      }
-    }
-  }
-}
-
-END
-	return $reg_template;
-} # }}}
-sub createDynamicScopes{ #{{{1
+sub createDynamicScopes{ #{{{
 	# Check to see which of those apply for the current firewall
 	# Itterate the wanted scopes - indexed by ScopeID
 	foreach my $start_ip (keys %{ $wantedScopes }){
@@ -395,10 +332,29 @@ sub createDynamicScopes{ #{{{1
 			if ($is_subnet->($start_ip)){
 				# $dynamic_scopes is indexed by start IP
 				# Bestaat deze al dan niet maken
+				my %data;
+				$data{'START_RANGE'}   = $$wantedScopes{$start_ip}{'StartRange'}; 
+				$data{'END_RANGE'}     = $$wantedScopes{$start_ip}{'EndRange'}; 
+				$data{'GW'} = $$interfaces{$IF_Name}{'ip_assignment'}{'mode'}{'static'}{'ip'};
+				$data{'MASK'}    = $$wantedScopes{$start_ip}{'SubnetMask'}; 
+				$data{'COMMENT'} = $$wantedScopes{$start_ip}{'Name'}; 
+				my $scope;
+				$tt->process('dynamic_scope.tt', \%data, \$scope) or die $tt->error(), "\n";
+				print $scope;
 				if (! $$dynamic_scopes{$start_ip}){
-					print "$start_ip bestaat nog niet\n";
+					print "$start_ip bestaat nog niet interface $IF_Name, doing POST\n";
+					if ( postJSON("dhcp-server/ipv4/scopes/dynamic",$scope,'POST') ){
+						print  "Post ok\n";
+					}else{
+						print  "Post niet ok\n";
+					}
 				}else{
-					print "$start_ip bestaat al\n";
+					print "$start_ip bestaat nog niet interface $IF_Name doing PUT\n";
+					#if ( postJSON("dhcp-server/ipv4/scopes/dynamic",$scope,'PUT') ){
+					#	print  "Put ok\n";
+					#}else{
+					#	print  "Put niet ok\n";
+					#}
 				}
 			}
 		}
@@ -417,13 +373,26 @@ sub createStaticScopes{ #{{{1
 			);
 			if ($is_subnet->($IP)){
 				#print "$IP zit in het subnet van $IF_Name\n";
-				if (! $$static_scopes{$IP}){
-					print "Reservering voor $IP bestaat nog niet.\n";
-					my $scope = createJSONDynamic($IP,$wantedReservations,$wantedScopes);
-					print $scope;
-				#	postJSON("dhcp-server/ipv4/scopes/static",$reservation);
+				my %data;
+				$data{'IP'}   = $$wantedReservations{$IP}{'IPAddress'}; 
+				# Remove dashes from MAC
+				if ($$wantedReservations{$IP}{'ClientId'} =~ /([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})/){
+					$data{'MAC'} ="$1$2$3$4$5$6"; 
 				}else{
-					print "Reservering voor $IP bestaat al.\n";
+					$data{'MAC'} = "undef";
+				}
+				$data{'NAME'}     = $$wantedReservations{$IP}{'Name'}; 
+				$data{'COMMENT'}     = $$wantedReservations{$IP}{'Description'}; 
+				$data{'GW'} = $$interfaces{$IF_Name}{'ip_assignment'}{'mode'}{'static'}{'ip'};
+				$data{'MASK'} = $$interfaces{$IF_Name}{'ip_assignment'}{'mode'}{'static'}{'netmask'};
+				my $scope;
+				$tt->process('static_scope.tt', \%data, \$scope) or die $tt->error(), "\n";
+				if (! $$static_scopes{$IP}){
+					print "Reservering voor $IP bestaat nog niet. Doing POST\n";
+					postJSON("dhcp-server/ipv4/scopes/static",$scope, 'POST');
+				}else{
+					print "Reservering voor $IP bestaat al. Doing PUT\n";
+					#postJSON("dhcp-server/ipv4/scopes/static",$scope, 'PUT');
 				}
 			}
 		}
@@ -437,7 +406,6 @@ if ( login() ){
 	# Get te excisting ones to not do double work
 	$static_scopes  = getStaticScopes();
 	$dynamic_scopes = getDynamicScopes();
-	#print Dumper $dynamic_scopes; exit 1;
 	$interfaces     = getInterfaces();
 
 	# Create a hash from the MS DHCP exports
