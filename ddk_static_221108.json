@@ -2,25 +2,25 @@
    "dhcp_server":{
       "ipv4":{
          "scope":{
-            "dynamic":[
+            "static":[
                {
-                  "from":"[% START_RANGE %]",
-                  "to":"[% END_RANGE %]",
+                  "ip":"10.21.1.2",
+                  "mac":"589EC60001C0",
                   "enable":true,
+                  "name":"",
                   "lease_time":1440,
-                  "default_gateway":"[% GW %]",
-                  "netmask":"[% MASK %]",
-                  "comment":"[% COMMENT %]",
-                  "allow_bootp":false,
-                  "domain_name":"atlascollege.nl",
+                  "default_gateway":"10.21.0.1",
+                  "netmask":"255.255.0.0",
+                  "comment":"",
+                  "domain_name":"",
                   "dns":{
-                     "server":{
-                        "static":{
-                           "primary":"0.0.0.0",
-                           "secondary":"0.0.0.0",
-                           "tertiary":"0.0.0.0"
-                        }
-                     }
+                    "server":{
+                      "static":{
+                        "primary":"0.0.0.0",
+                        "secondary":"0.0.0.0",
+                        "tertiary":"0.0.0.0"
+                      }
+                    }
                   },
                   "wins":{
                      "primary":"0.0.0.0",
@@ -46,4 +46,3 @@
       }
    }
 }
-

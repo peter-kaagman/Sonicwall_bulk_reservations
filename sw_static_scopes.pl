@@ -327,7 +327,9 @@ sub createDynamicScopes{ #{{{
 		foreach my $IF_Name (keys %{ $interfaces }){
 			# Setup a subnet matcher to check
 			my $is_subnet = subnet_matcher (
-				$$interfaces{$IF_Name}{'ip_assignment'}{'mode'}{'static'}{'ip'} .  "/" .  $$interfaces{$IF_Name}{'ip_assignment'}{'mode'}{'static'}{'netmask'} 
+				$$interfaces{$IF_Name}{'ip_assignment'}{'mode'}{'static'}{'ip'} .  
+				"/" .  
+				$$interfaces{$IF_Name}{'ip_assignment'}{'mode'}{'static'}{'netmask'} 
 			);
 			if ($is_subnet->($start_ip)){
 				# $dynamic_scopes is indexed by start IP
@@ -340,7 +342,7 @@ sub createDynamicScopes{ #{{{
 				$data{'COMMENT'} = $$wantedScopes{$start_ip}{'Name'}; 
 				my $scope;
 				$tt->process('dynamic_scope.tt', \%data, \$scope) or die $tt->error(), "\n";
-				print $scope;
+				#print $scope;
 				if (! $$dynamic_scopes{$start_ip}){
 					print "$start_ip bestaat nog niet interface $IF_Name, doing POST\n";
 					if ( postJSON("dhcp-server/ipv4/scopes/dynamic",$scope,'POST') ){
@@ -349,7 +351,7 @@ sub createDynamicScopes{ #{{{
 						print  "Post niet ok\n";
 					}
 				}else{
-					print "$start_ip bestaat nog niet interface $IF_Name doing PUT\n";
+					print "$start_ip bestaat al\n";
 					#if ( postJSON("dhcp-server/ipv4/scopes/dynamic",$scope,'PUT') ){
 					#	print  "Put ok\n";
 					#}else{
@@ -391,7 +393,7 @@ sub createStaticScopes{ #{{{1
 					print "Reservering voor $IP bestaat nog niet. Doing POST\n";
 					postJSON("dhcp-server/ipv4/scopes/static",$scope, 'POST');
 				}else{
-					print "Reservering voor $IP bestaat al. Doing PUT\n";
+					print "Reservering voor $IP bestaat al. Skipping\n";
 					#postJSON("dhcp-server/ipv4/scopes/static",$scope, 'PUT');
 				}
 			}
@@ -413,8 +415,8 @@ if ( login() ){
 	$wantedScopes       = createHash("StartRange",$scopes_file);
 
 	# At this point we have all te information needed to create the dynamic and static scopes.
-	createDynamicScopes();
-	#createStaticScopes();
+	#createDynamicScopes();
+	createStaticScopes();
 
 	commitChanges();
 	if( logout() ){
