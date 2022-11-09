@@ -352,11 +352,11 @@ sub createDynamicScopes{ #{{{
 					}
 				}else{
 					print "$start_ip bestaat al\n";
-					#if ( postJSON("dhcp-server/ipv4/scopes/dynamic",$scope,'PUT') ){
-					#	print  "Put ok\n";
-					#}else{
-					#	print  "Put niet ok\n";
-					#}
+					if ( postJSON("dhcp-server/ipv4/scopes/dynamic",$scope,'PATCH') ){
+						print  "Patch ok\n";
+					}else{
+						print  "Patch niet ok\n";
+					}
 				}
 			}
 		}
@@ -393,8 +393,8 @@ sub createStaticScopes{ #{{{1
 					print "Reservering voor $IP bestaat nog niet. Doing POST\n";
 					postJSON("dhcp-server/ipv4/scopes/static",$scope, 'POST');
 				}else{
-					print "Reservering voor $IP bestaat al. Skipping\n";
-					#postJSON("dhcp-server/ipv4/scopes/static",$scope, 'PUT');
+					print "Reservering voor $IP bestaat al. Patching\n";
+					postJSON("dhcp-server/ipv4/scopes/static",$scope, 'PATCH');
 				}
 			}
 		}
